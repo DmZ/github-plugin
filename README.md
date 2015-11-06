@@ -43,6 +43,12 @@ To install:
 	
 2. or use the plugin management console (http://example.com:8080/pluginManager/advanced) to upload the hpi file. You have to restart Jenkins in order to find the pluing in the installed plugins list.
 
+Using for Pull Requests
+-----------------------
+
+Configure Git plugin with:
+- RefSpec: `+refs/pull/*:refs/remotes/origin/pr/*`
+- Branch specifier: `origin/pr/${PR_NUM}/head`
 
 Plugin releases
 ---------------
