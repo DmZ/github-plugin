@@ -28,7 +28,7 @@ public class GitHubSetCommitStatusBuilder extends Builder {
                            Launcher launcher,
                            BuildListener listener) throws InterruptedException, IOException {
         final String sha1 = ObjectId.toString(BuildDataHelper.getCommitSHA1(build));
-        for (GitHubRepositoryName name : GitHubRepositoryNameContributor.parseAssociatedNames(build.getProject())) {
+        for (GitHubRepositoryName name : GitHubRepositoryNameContributor.parseAssociatedNames(build)) {
             for (GHRepository repository : name.resolve()) {
                 listener.getLogger().println(
                         GitHubCommitNotifier_SettingCommitStatus(repository.getHtmlUrl() + "/commit/" + sha1)

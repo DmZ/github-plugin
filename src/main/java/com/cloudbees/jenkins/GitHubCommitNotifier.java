@@ -109,7 +109,7 @@ public class GitHubCommitNotifier extends Notifier {
     private void updateCommitStatus(@Nonnull AbstractBuild<?, ?> build,
                                     @Nonnull BuildListener listener) throws InterruptedException, IOException {
         final String sha1 = ObjectId.toString(BuildDataHelper.getCommitSHA1(build));
-        for (GitHubRepositoryName name : GitHubRepositoryNameContributor.parseAssociatedNames(build.getProject())) {
+        for (GitHubRepositoryName name : GitHubRepositoryNameContributor.parseAssociatedNames(build)) {
             for (GHRepository repository : name.resolve()) {
                 GHCommitState state;
                 String msg;

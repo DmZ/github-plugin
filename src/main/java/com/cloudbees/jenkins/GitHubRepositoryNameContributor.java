@@ -5,6 +5,8 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.Util;
+import hudson.util.VariableResolver;
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.EnvironmentContributor;
 import hudson.model.Job;
@@ -55,6 +57,17 @@ public abstract class GitHubRepositoryNameContributor implements ExtensionPoint 
         }
     }
 
+    public void parseAssociatedNames(AbstractBuild<?, ?> build, Collection<GitHubRepositoryName> result) {
+        Job<?, ?> job = build.getProject();
+        SCMTriggerItem item = SCMTriggerItems.asSCMTriggerItem(job);
+        EnvVars envVars = buildEnv(job);
+        if (item != null) {
+            for (SCM scm : item.getSCMs()) {
+                addRepositoriesBuild(scm, envVars, result, build);
+            }
+        }
+    }
+
     /**
      * To select backward compatible method with old extensions
      * with overridden {@link #parseAssociatedNames(AbstractProject, Collection)}
@@ -93,6 +106,44 @@ public abstract class GitHubRepositoryNameContributor implements ExtensionPoint 
         return names;
     }
 
+    public static Collection<GitHubRepositoryName> parseAssociatedNames(AbstractBuild<?, ?> build) {
+        Set<GitHubRepositoryName> names = new HashSet<GitHubRepositoryName>();
+        for (GitHubRepositoryNameContributor c : all()) {
+            c.parseAssociatedNames(build, names);
+        }
+        return names;
+    }
+
+    protected EnvVars buildEnv(Job<?, ?> job) {
+        EnvVars env = new EnvVars();
+        for (EnvironmentContributor contributor : EnvironmentContributor.all()) {
+            try {
+                contributor.buildEnvironmentFor(job, env, TaskListener.NULL);
+            } catch (Exception e) {
+                LOGGER.debug("{} failed to build env ({}), skipping", contributor.getClass(), e.getMessage(), e);
+            }
+        }
+        return env;
+    }
+
+    protected static void addRepositoriesBuild(SCM scm,
+                                               EnvVars env,
+                                               Collection<GitHubRepositoryName> r,
+                                               AbstractBuild<?, ?> build) {
+        VariableResolver<String> vr = build.getBuildVariableResolver();
+        if (scm instanceof GitSCM) {
+            GitSCM git = (GitSCM) scm;
+            for (RemoteConfig rc : git.getRepositories()) {
+                for (URIish uri : rc.getURIs()) {
+                    String url = env.expand(Util.replaceMacro(uri.toString(), vr));
+                    GitHubRepositoryName repo = GitHubRepositoryName.create(url);
+                    if (repo != null) {
+                        r.add(repo);
+                    }
+                }
+            }
+        }
+    }
     /**
      * Default implementation that looks at SCMs
      */
@@ -107,18 +158,6 @@ public abstract class GitHubRepositoryNameContributor implements ExtensionPoint 
                     addRepositories(scm, envVars, result);
                 }
             }
-        }
-
-        protected EnvVars buildEnv(Job<?, ?> job) {
-            EnvVars env = new EnvVars();
-            for (EnvironmentContributor contributor : EnvironmentContributor.all()) {
-                try {
-                    contributor.buildEnvironmentFor(job, env, TaskListener.NULL);
-                } catch (Exception e) {
-                    LOGGER.debug("{} failed to build env ({}), skipping", contributor.getClass(), e.getMessage(), e);
-                }
-            }
-            return env;
         }
 
         protected static void addRepositories(SCM scm, EnvVars env, Collection<GitHubRepositoryName> r) {
